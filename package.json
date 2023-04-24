@@ -1,5 +1,5 @@
 {
-  "name": "friends",
+  "name": "gem-td-reborn",
   "version": "0.0.0",
   "scripts": {
     "dev": "vite --open",
@@ -15,6 +15,7 @@
     "vite": "^2.8.6"
   },
   "dependencies": {
-    "babylonjs": "^4.2.2"
+    "babylonjs": "^4.2.2",
+    "babylonjs-gui": "^6.0.0"
   }
 }
