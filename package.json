@@ -11,11 +11,13 @@
     "src/@types"
   ],
   "devDependencies": {
+    "@types/cannon": "^0.1.8",
     "typescript": "^4.6.2",
     "vite": "^2.8.6"
   },
   "dependencies": {
     "babylonjs": "^4.2.2",
-    "babylonjs-gui": "^6.0.0"
+    "babylonjs-gui": "^6.0.0",
+    "cannon": "^0.6.2"
   }
 }
