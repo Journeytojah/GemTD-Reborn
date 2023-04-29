@@ -60,7 +60,6 @@ var createScene = function (engine: BABYLON.Engine, canvas: HTMLCanvasElement) {
   // world manager
   const worldManager = new WorldManager(scene);
 
-
   scene.enablePhysics(new BABYLON.Vector3(0, -9.81, 0), new BABYLON.CannonJSPlugin());
 
   return scene;

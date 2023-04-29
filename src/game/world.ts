@@ -27,17 +27,34 @@ export class Board {
     const waypoints: Tile[] = [];
     waypoints.push(this.tiles[39][5]);
     waypoints.push(this.tiles[26][5]);
-    waypoints.push(this.tiles[26][16]);
+    waypoints.push(this.tiles[26][21]);
     waypoints.push(this.tiles[7][21]);
     waypoints.push(this.tiles[8][5]);
     waypoints.push(this.tiles[18][5]);
     waypoints.push(this.tiles[18][28]);
-    waypoints.push(this.tiles[0][31]);
+    waypoints.push(this.tiles[1][28]);
 
 
+    // color the waypoints to indicate they are walkable
+    waypoints.forEach((waypoint) => {
+      waypoint.walkable = true;
+    });
 
-
-
+    // make a walkable path between the waypoints by setting the tiles to walkable
+    for (let i = 0; i < waypoints.length - 1; i++) {
+      const start = waypoints[i];
+      const end = waypoints[i + 1];
+      const dx = end.x - start.x;
+      const dy = end.y - start.y;
+      const steps = Math.max(Math.abs(dx), Math.abs(dy));
+      const xIncrement = dx / steps;
+      const yIncrement = dy / steps;
+      for (let j = 0; j < steps; j++) {
+        const x = Math.round(start.x + j * xIncrement);
+        const y = Math.round(start.y + j * yIncrement);
+        this.tiles[x][y].walkable = true;
+      }
+    }
 
 
     // // make all the tiles walkable
@@ -55,37 +72,22 @@ export class Board {
   public spawnEnemy(scene: BABYLON.Scene) {
     const enemy = BABYLON.MeshBuilder.CreateSphere("enemy", { diameter: 1 }, scene);
     enemy.position.x = this.waypoints[0].x - this.width / 2;
-    enemy.position.y = 0.65;
+    enemy.position.y = 1.05;
     enemy.position.z = this.waypoints[0].y - this.height / 2;
     enemy.material = new BABYLON.StandardMaterial("enemy", scene);
     enemy.material.diffuseColor = new BABYLON.Color3(1, 1, 0);
     enemy.physicsImpostor = new BABYLON.PhysicsImpostor(enemy, BABYLON.PhysicsImpostor.BoxImpostor, { mass: 1, restitution: 0.4 }, scene);
   }
 
-  // create a loop that updates the enemy's position each frame to follow the waypoints
-  public updateEnemy(scene: BABYLON.Scene) {
-    scene.registerBeforeRender(() => {
-      const enemy = scene.getMeshByName("enemy");
-      if (enemy) {
-        const enemyPosition = enemy.position;
-        const waypoint = this.waypoints[0];
-        const waypointPosition = new BABYLON.Vector3(waypoint.x - this.width / 2, 0.1, waypoint.y - this.height / 2);
-        const distance = BABYLON.Vector3.Distance(enemyPosition, waypointPosition);
-        if (distance < 0.1) {
-          this.waypoints.shift();
-        }
-      }
-    });
-  }
 
   // move the enemy in a straight line to the right for now
   public moveEnemy(scene: BABYLON.Scene) {
     const enemy = scene.getMeshByName("enemy");
     // console.log(enemy);
 
-    // create a grid from the waypoints
-    var grid = new PF.Grid(this.width, this.height);
-
+    // create a matrix from the tiles array to use with the pathfinding library
+    const grid = new PF.Grid(this.width, this.height);
+    // grid setWalk
 
 
     // create a finder
@@ -106,8 +108,19 @@ export class Board {
         }
 
 
-        const path = finder.findPath(currentTile.x, currentTile.y, waypoint.x, waypoint.y, grid);
-        // console.log(path);
+        const path = finder.findPath(currentTile.x, currentTile.y, waypoint.x, waypoint.y, grid.clone());
+        console.log(path);
+
+        // draw the path using a line mesh, once a second and dispose of older lines to save memory 
+        if (scene.getMeshByName("path")) {
+          scene.getMeshByName("path").dispose();
+        }
+        const lineMesh = BABYLON.MeshBuilder.CreateLines("path", { points: path.map((point) => new BABYLON.Vector3(point[0] - this.width / 2, 0.1, point[1] - this.height / 2)) }, scene);
+        lineMesh.color = new BABYLON.Color3(0, 0, 0);
+        lineMesh.outlineWidth = 1;
+        lineMesh.isPickable = false;
+        lineMesh.alpha = 0.5;
+        lineMesh.position.y = 1;
 
         // move the enemy towards the next tile on the path
         const nextTile = this.waypoints[currentWaypointIndex];
@@ -120,13 +133,10 @@ export class Board {
         // const tileMesh = scene.getMeshByName(`tile-${currentTile.x}-${currentTile.y}`);
         // tileMesh.material.diffuseColor = new BABYLON.Color3(0.5, 0.5, 0.5);
 
-        // move enemy to the start if it reaches the end
+        // if it reaches the last waypoint, move it back to the first waypoint
         if (currentWaypointIndex === this.waypoints.length - 1) {
           currentWaypointIndex = 0;
           waypoint = this.waypoints[currentWaypointIndex];
-          enemy.position.x = waypoint.x - this.width / 2;
-          enemy.position.y = 0.65;
-          enemy.position.z = waypoint.y - this.height / 2;
         }
 
         // dispose of the enemy if it reaches the second to last waypoint
@@ -147,7 +157,7 @@ export class Board {
     for (let x = 0; x < this.width; x++) {
       for (let y = 0; y < this.height; y++) {
         const tile = this.tiles[x][y];
-        const tileMesh = BABYLON.MeshBuilder.CreateBox(`tile-${x}-${y}`, { width: 1, height: 0.1 }, scene);
+        const tileMesh = BABYLON.MeshBuilder.CreateBox(`tile-${x}-${y}`, { width: 1, height: 1 }, scene);
         tileMesh.position.x = x;
         tileMesh.position.y = 0;
         tileMesh.position.z = y;
@@ -178,17 +188,27 @@ export class Board {
       if (pointerInfo.type === BABYLON.PointerEventTypes.POINTERDOWN) {
         const pickResult = scene.pick(scene.pointerX, scene.pointerY);
         if (pickResult?.hit) {
-          // place a cube mesh on the tile that was clicked
-          const tileMesh = BABYLON.MeshBuilder.CreateBox("tile", { width: 1, height: 1 }, scene);
-          tileMesh.position = pickResult.pickedPoint;
-          tileMesh.position.y = 0.5;
-          tileMesh.material = new BABYLON.StandardMaterial("tile", scene);
-          tileMesh.material.diffuseColor = new BABYLON.Color3(0, 0, 1);
-          // give mesh physics
-          tileMesh.physicsImpostor = new BABYLON.PhysicsImpostor(tileMesh, BABYLON.PhysicsImpostor.BoxImpostor, { mass: 1, restitution: 0.9 }, scene);
+          // log the tile being clicked on to the console
+          const tileMesh = pickResult.pickedMesh;
+          const tileName = tileMesh.name;
+          const tileNameParts = tileName.split("-");
+          const tileX = parseInt(tileNameParts[1]);
+          const tileY = parseInt(tileNameParts[2]);
+          const tile = this.tiles[tileX][tileY];
+          console.log(tile);
 
-          // add them to a obstacles array
-          this.obstacles.push(tileMesh);
+          // place a tower on the tile clicked
+
+          const tower = BABYLON.MeshBuilder.CreateBox(`tower-${tileX}-${tileY}`, { width: 1, height: 1 }, scene);
+          tower.position.x = tileMesh.position.x;
+          tower.position.y = 1;
+          tower.position.z = tileMesh.position.z;
+          tower.material = new BABYLON.StandardMaterial("tower", scene);
+          tower.material.diffuseColor = new BABYLON.Color3(0, 0, 1);
+          tower.physicsImpostor = new BABYLON.PhysicsImpostor(tower, BABYLON.PhysicsImpostor.BoxImpostor, { mass: 0, restitution: 0.9 }, scene);
+          this.obstacles.push(tile);
+          tile.walkable = false;
+
         }
       }
     });
