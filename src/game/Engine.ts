@@ -1,5 +1,7 @@
-import * as BABYLON from 'babylonjs';
+import * as BABYLON from '@babylonjs/core';
 import { Board, WorldManager } from './world';
+import { DebugLayer } from '@babylonjs/core/Debug/debugLayer';
+import '@babylonjs/inspector';
 
 import cannon from "cannon";
 export class Engine {
@@ -14,16 +16,8 @@ export class Engine {
     this.scene = createScene(this.engine, this.canvas)
   }
 
-  debug(debugOn: boolean = true) {
-    if (debugOn) {
-      this.scene.debugLayer.show({ overlay: true });
-    } else {
-      this.scene.debugLayer.hide();
-    }
-  }
 
   run() {
-    this.debug(true);
     this.engine.runRenderLoop(() => {
       this.scene.render();
     });
@@ -35,8 +29,15 @@ var createScene = function (engine: BABYLON.Engine, canvas: HTMLCanvasElement) {
   // This creates a basic Babylon Scene object (non-mesh)
   var scene = new BABYLON.Scene(engine);
 
+
   window.CANNON = cannon;
   scene.enablePhysics(new BABYLON.Vector3(0, -9.81, 0), new BABYLON.CannonJSPlugin());
+
+  // Enable debug layer
+  const debugLayer = new DebugLayer(scene);
+  debugLayer.show({ overlay: true });
+
+
   // Create a top-down camera, position it above the floor, pointing down at the origin
   var camera = new BABYLON.ArcRotateCamera("camera", Math.PI / 2, 0, 23, BABYLON.Vector3.Zero(), scene);
 
@@ -47,7 +48,7 @@ var createScene = function (engine: BABYLON.Engine, canvas: HTMLCanvasElement) {
 
   // This attaches the camera to the canvas
   camera.attachControl(canvas, true);
-  // camera.detachControl(canvas);
+  camera.detachControl();
 
   // This creates a light, aiming 0,1,0 - to the sky (non-mesh)
   var light = new BABYLON.HemisphericLight("light", new BABYLON.Vector3(0, 1, 0), scene);
@@ -59,6 +60,13 @@ var createScene = function (engine: BABYLON.Engine, canvas: HTMLCanvasElement) {
 
   // world manager
   const worldManager = new WorldManager(scene);
+
+  // git the start button id and add an event listener to it to start the game
+  const startButton = document.getElementById("start");
+  startButton.addEventListener("click", () => {
+    worldManager.board.spawnEnemy(scene);
+    worldManager.board.moveEnemy(scene);
+  });
 
   scene.enablePhysics(new BABYLON.Vector3(0, -9.81, 0), new BABYLON.CannonJSPlugin());
 
