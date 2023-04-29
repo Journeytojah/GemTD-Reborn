@@ -1,5 +1,5 @@
 import * as BABYLON from '@babylonjs/core';
-import { Board, WorldManager } from './world';
+import { Board, Enemy, WorldManager } from './world';
 import { DebugLayer } from '@babylonjs/core/Debug/debugLayer';
 import '@babylonjs/inspector';
 
@@ -48,7 +48,7 @@ var createScene = function (engine: BABYLON.Engine, canvas: HTMLCanvasElement) {
 
   // This attaches the camera to the canvas
   camera.attachControl(canvas, true);
-  camera.detachControl();
+  // camera.detachControl();
 
   // This creates a light, aiming 0,1,0 - to the sky (non-mesh)
   var light = new BABYLON.HemisphericLight("light", new BABYLON.Vector3(0, 1, 0), scene);
@@ -56,14 +56,12 @@ var createScene = function (engine: BABYLON.Engine, canvas: HTMLCanvasElement) {
   // Default intensity is 1. Let's dim the light a small amount
   light.intensity = 0.7;
 
-  // from World.ts in the game folder (src\game\world.ts)
-
   // world manager
   const worldManager = new WorldManager(scene);
 
   // git the start button id and add an event listener to it to start the game
   const startButton = document.getElementById("start");
-  startButton.addEventListener("click", () => {
+  startButton?.addEventListener("click", () => {
     worldManager.board.spawnEnemy(scene);
     worldManager.board.moveEnemy(scene);
   });
